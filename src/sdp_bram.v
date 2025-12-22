@@ -1,6 +1,6 @@
 // Makes a 8-bit address, 1-bit data simple dual-port RAM
 
-module sdp_bram #(parameter ADDR_W)
+module sdp_bram #(parameter ADDR_W = 17)
 (
     input clk,
     input [ADDR_W-1:0] read_addr,
