@@ -13,6 +13,13 @@ module sdp_bram #(parameter ADDR_W = 17)
     // Main memory
     // (* ram_style = "block" *)
     reg mem [0:2**ADDR_W-1];
+    integer i;
+
+    initial begin
+        for (i = 0; i < 2**ADDR_W; i=i+1) begin
+            mem[i] = 1'b0;
+        end
+    end
 
     always @(posedge clk) begin
         // Write logic
