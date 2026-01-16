@@ -8,6 +8,7 @@ module fresh_tb #(parameter ADDR_W = 17) ();
     reg clk;
     reg [ADDR_W-1:0] check_addr;
     wire out_fresh;
+    wire check_ready;
 
     // FIFO (slower) range inputs
     reg range_clk;
@@ -22,6 +23,7 @@ module fresh_tb #(parameter ADDR_W = 17) ();
         .clk                (clk                ),
         .check_addr         (check_addr         ),
         .out_fresh          (out_fresh          ),
+        .check_ready        (check_ready        ),
         .range_clk          (range_clk          ),
         .rst                (rst                ),
         .wr_en              (wr_en              ),
@@ -63,6 +65,20 @@ module fresh_tb #(parameter ADDR_W = 17) ();
 
         @(posedge range_clk);
         wr_en = 0;
+
+        // Test fast readout
+        @(posedge check_ready);
+        @(posedge clk);
+        check_addr = 19;
+        
+        @(posedge clk);
+        check_addr = 20;
+        
+        @(posedge clk);
+        check_addr = 21;
+        
+        @(posedge clk);
+        check_addr = 26;
     end
 
 
