@@ -118,16 +118,14 @@ module top #(parameter ADDR_W = 17)
             end
 
             if (data_valid) begin
-                if (range_begin <= range_end) begin
-                    // Save address range
-                    current_addr <= range_begin;
-                    end_addr <= range_end;
-                    writing <= 1;
-                    rd_ready <= 0;
+                // Save address range
+                current_addr <= range_begin;
+                end_addr <= range_end;
+                writing <= 1;
+                rd_ready <= 0;
 
-                    // First write
-                    ram_write_en <= 1;
-                end
+                // First write
+                ram_write_en <= 1;
             end
         end else begin
             // WRITING
