@@ -20,4 +20,4 @@ The design closes timing on a XCZU1CG-SBVA484-2-I device at 500 MHz, with one cl
 
 A one bit-wide RAM is a simple but unusual choice.  If ingredient IDs are often checked sequentially, it would be reasonable to store the ingredient fresh/spoiled flags in words of 32, allowing many nearby ingredient IDs to be checked in a single clock cycle.
 
-Separately, a straightforward way to increase throughput would be to duplicate the BRAMs, writing the ingredients to multiple BRAMs in parallel but checking them independently.  A small ZU1CG device has about 100 BRAM, so it should be possible to scale by about 25x, for 12.5 million ingredients checked per second, and a required interface bandwidth of over 225 Gbps.  That's a lot of well-fed Elves.
+Separately, a straightforward way to increase throughput would be to duplicate the BRAMs, writing the ingredients to multiple BRAMs in parallel but checking them independently.  A small ZU1CG device has about 100 BRAM, so for our 17-bit ingredient ID it should be possible to scale by about 25x, for 12.5 billion ingredients checked per second, and a required interface bandwidth of over 225 Gbps.  That's a lot of well-fed Elves.
