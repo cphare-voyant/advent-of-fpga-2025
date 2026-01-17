@@ -19,6 +19,9 @@ module fresh_tb #(parameter ADDR_W = 17) ();
     reg input_range_fresh;
     wire fifo_full;
 
+    // Tracking signal
+    integer fresh_count = 0;
+
     top dut (
         .clk                (clk                ),
         .check_addr         (check_addr         ),
@@ -51,34 +54,58 @@ module fresh_tb #(parameter ADDR_W = 17) ();
         rst = 0;
         #500  // FIFO takes ~450 ns to leave reset
 
-        // Load FIFO with a couple of ranges
+        // Load FIFO with example ranges
         @(posedge range_clk);
-        input_range_low = 20;
-        input_range_high = 24;
+        input_range_low = 3;
+        input_range_high = 5;
         input_range_fresh = 1;
         wr_en = 1;
 
         @(posedge range_clk);
-        input_range_low = 6;
-        input_range_high = 8;
-        input_range_fresh = 1;
+        input_range_low = 10;
+        input_range_high = 14;
+
+        @(posedge range_clk);
+        input_range_low = 16;
+        input_range_high = 20;
+
+        @(posedge range_clk);
+        input_range_low = 12;
+        input_range_high = 18;
 
         @(posedge range_clk);
         wr_en = 0;
 
+
         // Test fast readout
-        @(posedge check_ready);
+        @(posedge check_ready);  // Wait for RAM to fully update
         @(posedge clk);
-        check_addr = 19;
+        check_addr = 1;
         
         @(posedge clk);
-        check_addr = 20;
+        check_addr = 5;
+        if (out_fresh) fresh_count = fresh_count + 1;
         
         @(posedge clk);
-        check_addr = 21;
+        check_addr = 8;
+        if (out_fresh) fresh_count = fresh_count + 1;
         
         @(posedge clk);
-        check_addr = 26;
+        check_addr = 11;
+        if (out_fresh) fresh_count = fresh_count + 1;
+
+        @(posedge clk);
+        check_addr = 17;
+        if (out_fresh) fresh_count = fresh_count + 1;
+
+        @(posedge clk);
+        check_addr = 32;
+        if (out_fresh) fresh_count = fresh_count + 1;
+
+        @(posedge clk);
+        if (out_fresh) fresh_count = fresh_count + 1;
+
+        $display(fresh_count);  // Should be 3
     end
 
 

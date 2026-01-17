@@ -21,17 +21,19 @@ module top #(parameter ADDR_W = 17)
     // FIFO read-side signals
     wire [ADDR_W-1:0] range_begin, range_end;
     wire range_fresh;
-    wire fifo_empty; // TODO: What do we use fifo_empty for?
-    // reg rd_en;  // TODO: What do we use rd_en for?
+    wire fifo_empty;
     reg rd_ready = 1;
     wire fifo_data_NC;  // Extra don't care bit to absorb FIFO data width
-    reg [1:0] state = 0;  // 0 if idle, 1 if idle and FIFO has data, 2 if processing
-    reg [ADDR_W-1:0] range_current;  // Current range of processing loop
-    wire [ADDR_W-1:0] ram_write_addr;
-    wire ram_write_val;
     reg ram_write_en = 0;
     wire ram_out;
-    assign check_ready = fifo_empty & !writing & !data_valid;  // RAM is correct if no ranges in fifo, no samples being written, or fresh from fifo
+
+    // Loop FSM signals
+    reg writing = 0;  // Basic FSM: 0: IDLE, 1: WRITING
+    reg [ADDR_W-1:0] current_addr;
+    reg [ADDR_W-1:0] end_addr;
+    reg data_valid;
+    wire rd_en = rd_ready & !fifo_empty;
+    assign check_ready = fifo_empty & !writing & !data_valid;  // RAM is correct if no ranges in fifo, no samples being written, and no sample fresh from fifo
 
     // FIFO write-side ready logic
     wire wr_rst_busy;
@@ -39,74 +41,8 @@ module top #(parameter ADDR_W = 17)
     assign fifo_ready = !fifo_full && !wr_rst_busy;
 
 
-    // RAM load signals
-    // reg [ADDR_W-1:0] current_addr;
-
-    // Main memory load logic
-    // If FIFO is not empty, assert read and dequeue a range from the FIFO
-    // Loop through range, writing bits to RAM until current_addr == end of range
-    // always @(posedge clk)
-    // begin
-    //     if (state == 1) begin
-    //         // Change state
-    //         state <= 2;
-    //         // Write beginning of range to RAM
-    //         ram_write_addr <= range_begin;
-    //         ram_write_val <= range_fresh;  // TODO: Can replace with assignment?
-    //         ram_write_en <= 1;  // TODO: Can replace with assignment?
-    //         // Increment counter
-    //         range_current <= range_begin + 1;
-    //     end else if (state == 2) begin
-    //         if (range_current < range_end) begin
-    //             ram_write_addr <= range_current;
-    //             range_current <= range_current + 1;
-    //         end else begin
-    //             state <= 0;
-    //             ram_write_en <= 0;
-    //             rd_en <= 1;
-    //         end
-    //     end else if (state == 0) begin
-    //         if (!fifo_empty) begin
-    //             state <= 1;
-    //             rd_en <= 0;
-    //         end
-    //     end
-    //     // Overall logic:
-    //     // If FIFO is empty and loop logic is ready, on the next clock cycle, read from the FIFO and begin processing
-    //     // If loop logic is pro
-    // end
-
-
-    // // Dummy logic to understand FIFO reads better
-    // reg data_valid;
-    // assign ram_write_en = data_valid;
-    // assign ram_write_val = input_range_fresh;
-    // assign ram_write_addr = range_begin;  // Needs changed.
-    // always @(posedge clk) begin
-    //     rd_en <= !fifo_empty && rd_ready;
-    //     if (rd_en) begin
-    //         // If read is requested and fifo has data, start a read
-    //         data_valid <= 1;
-    //     end
-    //     if (data_valid) begin
-    //         // One clock cycle later, data is good.  Write to RAM.
-    //         ram_write_addr <= range_begin;
-    //         // TODO: Better, RAM write enable should be just tied to data_valid (at least in this "write only the start" scheme)
-    //     end
-
-
-    reg writing = 0;  // Basic FSM: 0: IDLE, 1: WRITING
-    reg [ADDR_W-1:0] current_addr;
-    reg [ADDR_W-1:0] end_addr;
-    reg data_valid;
-    wire rd_en = rd_ready & !fifo_empty;
-
-    assign ram_write_addr = current_addr;
-    assign ram_write_val = range_fresh;
-
     always @(posedge clk) begin
         out_fresh <= ram_out;
-
         data_valid <= rd_en;
 
         if (!writing) begin
@@ -151,7 +87,8 @@ module top #(parameter ADDR_W = 17)
         .READ_MODE            ("std"  ),
         .SIM_ASSERT_CHK       (1      ),
         .WRITE_DATA_WIDTH     (36     ),
-        .WR_DATA_COUNT_WIDTH  (11     )         // For debug    
+        .WR_DATA_COUNT_WIDTH  (11     ),         // For debug    
+        .SLEEP                (       )
     )
     range_fifo (
         // Write side
@@ -174,12 +111,10 @@ module top #(parameter ADDR_W = 17)
     (
         .clk        (clk            ),
         .read_addr  (check_addr     ),
-        .write_addr (ram_write_addr ),
-        .write_val  (ram_write_val  ),
+        .write_addr (current_addr   ),
+        .write_val  (range_fresh    ),
         .write_en   (ram_write_en   ),
         .read_val   (ram_out        )
     );
-
-
 
 endmodule
