@@ -1,0 +1,21 @@
+# Hungry Elves
+
+With the holiday rush, the Elves at the North Pole have expanded their ranks.  Exponentially.  Unfortunately this has placed an enormous strain on the cafeteria, where orders are piling up and Elves can be seen nailing legs upside-down onto toy horses, delirious from hunger.
+
+The inventory management system, dutifully implemented in Python, can't keep up with the sheer quantity of ingredients being requested from the kitchen.  The kitchen desperately needs a way to increase throughput of the inventory checks.  Latency of these checks should also be fast--we can't keep the Elves away from their workbenches too long.  On the other hand, new ingredient deliveries don't come that often.  We can afford to update the inventory system a bit more slowly with information about fresh or spoiled ingredients.
+
+A quick analysis shows that even well-optimized software can't meet the kitchen's throughput and latency goals.  The new hire to Elven engineering makes a case for running the inventory system on a shiny FPGA (an AMD/Xilinx Zynq Ultrascale+ MPSoC).
+
+This is a solution to Advent of Code/[Advent of FPGA](https://blog.janestreet.com/advent-of-fpga-challenge-2025/) 2025, [Day 5](https://adventofcode.com/2025/day/5).
+
+## FPGA Implementation Strategy
+
+FPGAs allow very fast lookup from moderately large SRAMs (in the Ultrascale+ family, read access at [over 600 MHz](https://docs.amd.com/r/en-US/ds925-zynq-ultrascale-plus/Block-RAM-and-FIFO-Switching-Characteristics) to a few Mb of BRAM).  We can store the catalog of fresh ingredients in a dense array in the BRAM, with the address corresponding to the ingredient ID, and the fresh/spoiled flag as a single bit.  Lookups then are simple reads from a 1 bit wide, very deep memory.
+
+Fresh ingredients are assumed to be presented on a separate clock domain as inclusive ranges of ingredient IDs, plus one bit to designate the range as fresh or spoiled.  I choose a 17-bit ingredient ID so this proof of concept design can use just a single 36-bit FIFO primitive.  String processing and reading from a file is handled offline.  The ingredient ranges are stored in an asynchronous FIFO to bring them into the main clock domain, then looped through and written to the BRAM one by one.  A simple state machine manages BRAM writes and backpressure on the FIFO.
+
+The design closes timing on a XCZU1CG-SBVA484-2-I device at 500 MHz, with one clock cycle latency for fresh/spoiled ingredient checks.  The design uses 5, 36kb BRAM: 4 for the ingredient storage and one for the FIFO.  I ignore I/O concerns for this puzzle, but bandwidth requirements are fairly large at 9 Gbps plus overhead.  Ethernet seems likely if the Elves can put up with the network stack dominating latency.  For a lower-level interfaces, LVDS could easily keep up with the bandwidth and latency (though with a 17-bit, 500 MHz bus requiring PCB trace length matching, I hope the Elves have some magic signal integrity and layout tools).
+
+## Performance Improvements
+
+A straightforward way to increase throughput would be to duplicate the BRAMs, writing the ingredients to multiple BRAMs in parallel but checking them independently.  A small ZU1CG device has about 100 BRAM, so it should be possible to scale by about 25x, for 12.5 million ingredients checked per second, and a required interface bandwidth of over 225 Gbps.  That's a lot of well-fed Elves.
